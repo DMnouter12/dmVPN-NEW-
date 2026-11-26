@@ -29,7 +29,8 @@ jobs:
           NIVORANT_KEY_BASE64: ${{ secrets.NIVORANT_KEY_BASE64 }}
         run: |
           test -n "$NIVORANT_KEY_BASE64"
-          printf '%s' "$NIVORANT_KEY_BASE64" | base64 --decode > app/nivorant-upload.jks
+          printf '%s' "$NIVORANT_KEY_BASE64" | tr -d '[:space:]' | base64 --decode > app/nivorant-upload.jks
+          test -s app/nivorant-upload.jks
 
       - name: Build APKs
         env:
