@@ -42,7 +42,39 @@ class MainActivity : Activity() {
         showHome()
     }
 
-    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+    private fun dp(v: Int) =
+        (v * resources.displayMetrics.density).toInt()
+
+    // Плавное появление экранов
+    private fun showAnimated(root: View) {
+        root.alpha = 0f
+        setContentView(root)
+
+        root.animate()
+            .alpha(1f)
+            .setDuration(260L)
+            .start()
+    }
+
+    // Анимация нажатия без изменения дизайна
+    private fun animateTap(view: View, action: () -> Unit) {
+        view.animate().cancel()
+        view.animate()
+            .scaleX(0.96f)
+            .scaleY(0.96f)
+            .setDuration(75L)
+            .withEndAction {
+                view.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(100L)
+                    .withEndAction {
+                        action()
+                    }
+                    .start()
+            }
+            .start()
+    }
 
     private fun label(
         value: String,
@@ -118,7 +150,11 @@ class MainActivity : Activity() {
 
         header.addView(label("⚙", 29f, white, true).apply {
             gravity = Gravity.CENTER
-            setOnClickListener { showInfo("НАСТРОЙКИ") }
+            setOnClickListener {
+                animateTap(it) {
+                    showInfo("НАСТРОЙКИ")
+                }
+            }
         }, LinearLayout.LayoutParams(dp(48), dp(55)))
 
         page.addView(header)
@@ -155,12 +191,14 @@ class MainActivity : Activity() {
             elevation = dp(10).toFloat()
 
             setOnClickListener {
-                status.text = "НЕ ПОДКЛЮЧЕНО"
-                Toast.makeText(
-                    this@MainActivity,
-                    "VPN-сервер ещё не настроен. Подключение не выполнялось.",
-                    Toast.LENGTH_LONG
-                ).show()
+                animateTap(it) {
+                    status.text = "НЕ ПОДКЛЮЧЕНО"
+                    Toast.makeText(
+                        this@MainActivity,
+                        "VPN-сервер ещё не настроен. Подключение не выполнялось.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         }
 
@@ -180,7 +218,11 @@ class MainActivity : Activity() {
         )
 
         serverHeader.addView(label("СМЕНИТЬ  →", 13f, lavender, true).apply {
-            setOnClickListener { showServers() }
+            setOnClickListener {
+                animateTap(it) {
+                    showServers()
+                }
+            }
         })
 
         serverCard.addView(serverHeader)
@@ -262,7 +304,7 @@ class MainActivity : Activity() {
 
         root.addView(navigation(), LinearLayout.LayoutParams(-1, dp(76)))
 
-        setContentView(root)
+        showAnimated(root)
     }
 
     private fun flag(country: String) = when (country) {
@@ -310,12 +352,14 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
 
                 setOnClickListener {
-                    when (index) {
-                        0 -> showHome()
-                        1 -> showServers()
-                        2 -> showInfo("СТАТИСТИКА")
-                        3 -> showInfo("ПРОФИЛЬ")
-                        else -> showInfo("НАСТРОЙКИ")
+                    animateTap(it) {
+                        when (index) {
+                            0 -> showHome()
+                            1 -> showServers()
+                            2 -> showInfo("СТАТИСТИКА")
+                            3 -> showInfo("ПРОФИЛЬ")
+                            else -> showInfo("НАСТРОЙКИ")
+                        }
                     }
                 }
             }
@@ -389,15 +433,17 @@ class MainActivity : Activity() {
             box.addView(row)
 
             box.setOnClickListener {
-                selectedServer = item.second
-                selectedCity = item.third
-                showHome()
+                animateTap(it) {
+                    selectedServer = item.second
+                    selectedCity = item.third
+                    showHome()
 
-                Toast.makeText(
-                    this,
-                    "Выбран сервер: ${item.second}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Выбран сервер: ${item.second}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
 
             content.addView(box, LinearLayout.LayoutParams(-1, dp(82)).apply {
@@ -409,7 +455,7 @@ class MainActivity : Activity() {
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(navigation(), LinearLayout.LayoutParams(-1, dp(76)))
 
-        setContentView(root)
+        showAnimated(root)
     }
 
     private fun showInfo(title: String) {
@@ -452,7 +498,7 @@ class MainActivity : Activity() {
         root.addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(navigation(), LinearLayout.LayoutParams(-1, dp(76)))
 
-        setContentView(root)
+        showAnimated(root)
     }
 
     inner class NeonOrbView : View(this) {
@@ -604,16 +650,3 @@ class MainActivity : Activity() {
                     dp(4).toFloat(),
                     p
                 )
-                p.clearShadowLayer()
-            }
-
-            p.style = Paint.Style.STROKE
-            p.strokeWidth = dp(2).toFloat()
-            p.color = Color.argb(150, 190, 90, 255)
-
-            canvas.drawLine(w * .22f, h * .38f, w * .52f, h * .36f, p)
-            canvas.drawLine(w * .52f, h * .36f, w * .78f, h * .62f, p)
-            canvas.drawLine(w * .52f, h * .36f, w * .63f, h * .3f, p)
-        }
-    }
-}
