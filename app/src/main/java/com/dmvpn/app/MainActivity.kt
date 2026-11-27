@@ -5,12 +5,13 @@ import android.app.Activity
 import android.os.Bundle
 import android.graphics.*
 import android.graphics.drawable.GradientDrawable
+import android.animation.ValueAnimator
 import android.view.Gravity
 import android.view.View
 import android.view.animation.LinearInterpolator
-import android.animation.ValueAnimator
 import android.widget.*
 import android.graphics.Typeface
+import android.graphics.Paint
 
 class MainActivity : Activity() {
 
@@ -21,7 +22,6 @@ class MainActivity : Activity() {
     private val white = Color.rgb(245, 240, 255)
     private val muted = Color.rgb(145, 135, 165)
 
-    private lateinit var root: LinearLayout
     private lateinit var content: FrameLayout
     private var selectedServer = 0
     private var currentPage = "Главная"
@@ -38,12 +38,11 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = bg
         window.navigationBarColor = bg
-        window.decorView.systemUiVisibility = 0
         showApp()
     }
 
     private fun showApp() {
-        root = LinearLayout(this).apply {
+        val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(bg)
         }
@@ -53,29 +52,25 @@ class MainActivity : Activity() {
             setPadding(22, 18, 22, 12)
         }
 
-        val brand = TextView(this).apply {
+        header.addView(TextView(this).apply {
             text = "NIVORANT"
             textSize = 23f
             letterSpacing = 0.16f
             setTextColor(white)
             typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
-        }
+        })
 
-        val subtitle = TextView(this).apply {
+        header.addView(TextView(this).apply {
             text = "YOUR PRIVATE NETWORK"
             textSize = 9f
             letterSpacing = 0.22f
             setTextColor(muted)
-        }
+        })
 
-        header.addView(brand)
-        header.addView(subtitle)
         root.addView(header)
 
         content = FrameLayout(this)
-        root.addView(content, LinearLayout.LayoutParams(
-            -1, 0, 1f
-        ))
+        root.addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val nav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -93,15 +88,14 @@ class MainActivity : Activity() {
         )
 
         tabs.forEach { item ->
-            val button = TextView(this).apply {
+            nav.addView(TextView(this).apply {
                 text = "${item.second}\n${item.first}"
                 gravity = Gravity.CENTER
                 textSize = 10f
                 setTextColor(if (item.first == currentPage) pink else muted)
                 setPadding(3, 5, 3, 5)
                 setOnClickListener { openPage(item.first) }
-            }
-            nav.addView(button, LinearLayout.LayoutParams(0, -2, 1f))
+            }, LinearLayout.LayoutParams(0, -2, 1f))
         }
 
         root.addView(nav)
@@ -133,14 +127,16 @@ class MainActivity : Activity() {
 
         scroll.addView(column)
         content.addView(scroll)
+
+        column.alpha = 0f
+        column.animate().alpha(1f).setDuration(300).start()
     }
 
     private fun homePage(box: LinearLayout) {
         title(box, "Добро пожаловать")
         text(box, "Твоя приватность начинается здесь", muted, 13f)
 
-        val orb = GlowOrbView()
-        box.addView(orb, LinearLayout.LayoutParams(-1, 245).apply {
+        box.addView(GlowOrbView(), LinearLayout.LayoutParams(-1, 245).apply {
             topMargin = 10
         })
 
@@ -151,6 +147,7 @@ class MainActivity : Activity() {
         box.addView(connect, LinearLayout.LayoutParams(-1, 54).apply {
             topMargin = 22
         })
+
         connect.setOnClickListener {
             Toast.makeText(
                 this,
@@ -184,6 +181,7 @@ class MainActivity : Activity() {
     private fun serversPage(box: LinearLayout) {
         title(box, "Серверы")
         text(box, "Выбери расположение для соединения", muted, 13f)
+
         box.addView(MapView(), LinearLayout.LayoutParams(-1, 190).apply {
             topMargin = 18
             bottomMargin = 12
@@ -197,6 +195,7 @@ class MainActivity : Activity() {
             val details = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
             }
+
             details.addView(textView(server.first, white, 15f, true))
             details.addView(textView(server.second, muted, 11f))
 
@@ -211,6 +210,7 @@ class MainActivity : Activity() {
                 selectedServer = index
                 openPage("Серверы")
             }
+
             box.addView(item)
         }
     }
@@ -232,7 +232,9 @@ class MainActivity : Activity() {
         statCard(box, "Время соединения", "—")
         statCard(box, "Получено данных", "—")
         statCard(box, "Отправлено данных", "—")
-        text(box, "Показатели появятся после настройки настоящего VPN-соединения.",
+
+        text(box,
+            "Показатели появятся после настройки настоящего VPN-соединения.",
             muted, 11f)
     }
 
@@ -320,9 +322,9 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(17, 14, 17, 14)
             background = rounded(panel, 18, Color.rgb(48, 36, 69))
-            val params = LinearLayout.LayoutParams(-1, -2)
-            params.bottomMargin = 10
-            layoutParams = params
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
+                bottomMargin = 10
+            }
         }
     }
 
@@ -343,11 +345,7 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun rounded(
-        color: Int,
-        radius: Int,
-        stroke: Int
-    ): GradientDrawable {
+    private fun rounded(color: Int, radius: Int, stroke: Int): GradientDrawable {
         return GradientDrawable().apply {
             setColor(color)
             cornerRadius = radius.toFloat()
@@ -372,7 +370,7 @@ class MainActivity : Activity() {
         box.addView(item)
     }
 
-    inner class GlowOrbView : View(this) {
+    inner class GlowOrbView : View(this@MainActivity) {
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         private var angle = 0f
         private var pulse = 0f
@@ -383,7 +381,7 @@ class MainActivity : Activity() {
             interpolator = LinearInterpolator()
             addUpdateListener {
                 angle = it.animatedValue as Float
-                pulse = (Math.sin(Math.toRadians(angle.toDouble() * 2)) + 1) / 2f
+                pulse = ((kotlin.math.sin(Math.toRadians(angle.toDouble() * 2)) + 1.0) / 2.0).toFloat()
                 invalidate()
             }
         }
@@ -394,13 +392,14 @@ class MainActivity : Activity() {
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
+
             val cx = width / 2f
             val cy = height / 2f
             val radius = 76f
 
             paint.style = Paint.Style.FILL
             paint.color = Color.argb(35, 151, 75, 255)
-            canvas.drawCircle(cx, cy, radius + 28 + pulse * 8, paint)
+            canvas.drawCircle(cx, cy, radius + 28f + pulse * 8f, paint)
 
             paint.style = Paint.Style.STROKE
             paint.strokeWidth = 2.5f
@@ -412,7 +411,8 @@ class MainActivity : Activity() {
             canvas.save()
             canvas.rotate(angle, cx, cy)
             canvas.drawOval(
-                cx - 100, cy - 35, cx + 100, cy + 35, paint
+                cx - 100f, cy - 35f,
+                cx + 100f, cy + 35f, paint
             )
             canvas.restore()
 
@@ -425,7 +425,6 @@ class MainActivity : Activity() {
 
             paint.textSize = 10f
             paint.color = pink
-            paint.letterSpacing = 0.1f
             canvas.drawText("PRIVATE NETWORK", cx, cy + 112f, paint)
         }
 
@@ -435,7 +434,7 @@ class MainActivity : Activity() {
         }
     }
 
-    inner class MapView : View(this) {
+    inner class MapView : View(this@MainActivity) {
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         private var phase = 0f
 
@@ -454,6 +453,7 @@ class MainActivity : Activity() {
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
+
             val w = width.toFloat()
             val h = height.toFloat()
 
@@ -464,6 +464,7 @@ class MainActivity : Activity() {
             paint.color = Color.rgb(45, 32, 65)
             paint.strokeWidth = 1f
             paint.style = Paint.Style.STROKE
+
             for (i in 1..5) {
                 canvas.drawLine(w * i / 6f, 10f, w * i / 6f, h - 10f, paint)
                 canvas.drawLine(10f, h * i / 6f, w - 10f, h * i / 6f, paint)
@@ -481,12 +482,14 @@ class MainActivity : Activity() {
                 lineTo(w * .23f, h * .84f)
                 lineTo(w * .12f, h * .70f)
                 close()
+
                 moveTo(w * .43f, h * .16f)
                 lineTo(w * .56f, h * .12f)
                 lineTo(w * .63f, h * .27f)
                 lineTo(w * .58f, h * .43f)
                 lineTo(w * .48f, h * .38f)
                 close()
+
                 moveTo(w * .66f, h * .22f)
                 lineTo(w * .88f, h * .18f)
                 lineTo(w * .94f, h * .40f)
@@ -494,6 +497,7 @@ class MainActivity : Activity() {
                 lineTo(w * .69f, h * .44f)
                 close()
             }
+
             canvas.drawPath(land, paint)
 
             val nodes = listOf(
@@ -506,17 +510,23 @@ class MainActivity : Activity() {
 
             paint.color = Color.argb(65, 220, 74, 255)
             paint.strokeWidth = 1.5f
+
             for (i in 0 until nodes.size - 1) {
                 canvas.drawLine(
                     nodes[i].first, nodes[i].second,
-                    nodes[i + 1].first, nodes[i + 1].second, paint
+                    nodes[i + 1].first, nodes[i + 1].second,
+                    paint
                 )
             }
 
             nodes.forEach { point ->
                 paint.style = Paint.Style.FILL
-                paint.color = Color.argb((45 + phase * 90).toInt(), 220, 74, 255)
-                canvas.drawCircle(point.first, point.second, 9f + phase * 7f, paint)
+                paint.color = Color.argb(
+                    (45 + phase * 90).toInt(), 220, 74, 255
+                )
+                canvas.drawCircle(
+                    point.first, point.second, 9f + phase * 7f, paint
+                )
                 paint.color = pink
                 canvas.drawCircle(point.first, point.second, 3.5f, paint)
             }
