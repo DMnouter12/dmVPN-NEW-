@@ -2,95 +2,69 @@ package com.dmvpn.app
 
 import android.app.Activity
 import android.os.Bundle
-import android.graphics.*
+import android.animation.ValueAnimator
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
-import android.view.animation.*
-import android.widget.*
-import android.content.res.ColorStateList
-import android.graphics.Typeface
-import kotlin.math.*
+import android.view.animation.LinearInterpolator
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import android.widget.Toast
+import kotlin.math.min
 
 class MainActivity : Activity() {
-
     private val bg = Color.rgb(5, 3, 17)
     private val purple = Color.rgb(151, 25, 255)
     private val pink = Color.rgb(255, 27, 190)
     private val white = Color.rgb(248, 237, 255)
     private val lavender = Color.rgb(198, 158, 255)
-    private var connected = false
+
     private var selectedServer = "США"
     private var selectedCity = "New York"
-    private lateinit var content: LinearLayout
-    private lateinit var statusText: TextView
-    private lateinit var statusDescription: TextView
-    private lateinit var connectButton: TextView
-    private lateinit var orb: NeonOrbView
+    private lateinit var page: LinearLayout
+    private lateinit var status: TextView
+    private lateinit var connect: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.statusBarColor = bg
         window.navigationBarColor = bg
-        window.decorView.systemUiVisibility = 0
         showHome()
     }
 
-    private fun dp(v: Int): Int =
-        (v * resources.displayMetrics.density).toInt()
+    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
-    private fun gradient(
-        colors: IntArray,
-        radius: Float,
-        strokeColor: Int = Color.TRANSPARENT,
-        strokeWidth: Int = 0
-    ): GradientDrawable {
-        return GradientDrawable(
-            GradientDrawable.Orientation.LEFT_RIGHT,
-            colors
-        ).apply {
-            cornerRadius = radius
-            if (strokeWidth > 0) setStroke(strokeWidth, strokeColor)
-        }
-    }
-
-    private fun text(
-        value: String,
-        size: Float,
-        color: Int = white,
-        bold: Boolean = false
-    ): TextView {
-        return TextView(this).apply {
+    private fun label(value: String, size: Float, color: Int = white, bold: Boolean = false): TextView =
+        TextView(this).apply {
             text = value
             textSize = size
             setTextColor(color)
-            typeface = if (bold) Typeface.create("sans-serif", Typeface.BOLD)
-            else Typeface.create("sans-serif", Typeface.NORMAL)
+            typeface = Typeface.create("sans-serif", if (bold) Typeface.BOLD else Typeface.NORMAL)
             gravity = Gravity.CENTER_VERTICAL
-            includeFontPadding = true
         }
+
+    private fun panel(): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(18), dp(16), dp(18), dp(16))
+        background = GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(Color.rgb(19, 8, 39), Color.rgb(8, 4, 22))
+        ).apply {
+            cornerRadius = dp(24).toFloat()
+            setStroke(dp(1), Color.rgb(112, 25, 190))
+        }
+        elevation = dp(7).toFloat()
     }
 
-    private fun card(): LinearLayout {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(16), dp(18), dp(16))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(
-                    Color.rgb(16, 7, 34),
-                    Color.rgb(9, 4, 23)
-                )
-            ).apply {
-                cornerRadius = dp(25).toFloat()
-                setStroke(dp(1), Color.rgb(116, 20, 205))
-            }
-            elevation = dp(8).toFloat()
-        }
-    }
-
-    private fun addSpace(parent: LinearLayout, height: Int) {
-        parent.addView(View(this), LinearLayout.LayoutParams(1, dp(height)))
+    private fun space(parent: LinearLayout, h: Int) {
+        parent.addView(View(this), LinearLayout.LayoutParams(1, dp(h)))
     }
 
     private fun showHome() {
@@ -98,417 +72,172 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(bg)
         }
-
-        val scroll = ScrollView(this).apply {
-            clipToPadding = false
-            isFillViewport = true
-            setPadding(0, 0, 0, dp(12))
-        }
-
-        content = LinearLayout(this).apply {
+        val scroll = ScrollView(this).apply { clipToPadding = false }
+        page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(8), dp(18), dp(10))
+            setPadding(dp(18), dp(10), dp(18), dp(18))
         }
+        scroll.addView(page)
+        root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        scroll.addView(content)
-        root.addView(
-            scroll,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
-        )
-
-        buildHeader()
-        buildOrb()
-        buildStatus()
-        buildConnectButton()
-        buildServerCard()
-        buildMap()
-        buildProtectionCard()
-
-        root.addView(buildNavigation())
-        setContentView(root)
-    }
-
-    private fun buildHeader() {
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-
-        val brand = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-        }
-
-        val logo = text("NIVORANT", 30f, white, true)
-        logo.letterSpacing = 0.08f
-        logo.setShadowLayer(dp(15).toFloat(), 0f, 0f, purple)
-
-        val subtitle = text(
-            "Y O U R   P R I V A T E   N E T W O R K",
-            10f,
-            lavender
-        )
-
-        brand.addView(logo)
-        brand.addView(subtitle)
-
-        val settings = text("⚙", 31f, white, true).apply {
+        val brand = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        brand.addView(label("NIVORANT", 29f, white, true).apply {
+            letterSpacing = 0.08f
+            setShadowLayer(dp(14).toFloat(), 0f, 0f, purple)
+        })
+        brand.addView(label("Y O U R   P R I V A T E   N E T W O R K", 9f, lavender))
+        header.addView(brand, LinearLayout.LayoutParams(0, dp(62), 1f))
+        header.addView(label("⚙", 29f, white, true).apply {
             gravity = Gravity.CENTER
-            setShadowLayer(dp(12).toFloat(), 0f, 0f, purple)
-            setOnClickListener { showSimplePage("НАСТРОЙКИ") }
-        }
+            setOnClickListener { showInfo("НАСТРОЙКИ") }
+        }, LinearLayout.LayoutParams(dp(48), dp(55)))
+        page.addView(header)
 
-        header.addView(
-            brand,
-            LinearLayout.LayoutParams(0, dp(65), 1f)
-        )
-        header.addView(settings, LinearLayout.LayoutParams(dp(48), dp(55)))
+        val orbHolder = FrameLayout(this)
+        orbHolder.addView(NeonOrbView(), FrameLayout.LayoutParams(dp(300), dp(300), Gravity.CENTER))
+        page.addView(orbHolder, LinearLayout.LayoutParams(-1, dp(300)))
 
-        content.addView(header)
-    }
-
-    private fun buildOrb() {
-        orb = NeonOrbView()
-        val holder = FrameLayout(this).apply {
-            addView(
-                orb,
-                FrameLayout.LayoutParams(
-                    dp(300),
-                    dp(300),
-                    Gravity.CENTER
-                )
-            )
-        }
-
-        content.addView(
-            holder,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(310)
-            )
-        )
-    }
-
-    private fun buildStatus() {
-        statusText = text(
-            "НЕ ПОДКЛЮЧЕНО",
-            24f,
-            pink,
-            true
-        ).apply {
+        status = label("НЕ ПОДКЛЮЧЕНО", 23f, pink, true).apply {
             gravity = Gravity.CENTER
-            setShadowLayer(dp(12).toFloat(), 0f, 0f, pink)
-            letterSpacing = 0.03f
+            setShadowLayer(dp(10).toFloat(), 0f, 0f, pink)
         }
-
-        statusDescription = text(
-            "Твоё соединение пока не защищено",
-            15f,
-            lavender
-        ).apply {
+        page.addView(status)
+        page.addView(label("Твоё соединение пока не защищено", 14f, lavender).apply {
             gravity = Gravity.CENTER
-        }
+        })
+        space(page, 18)
 
-        content.addView(statusText)
-        content.addView(statusDescription)
-        addSpace(content, 18)
-    }
-
-    private fun buildConnectButton() {
-        connectButton = text(
-            "▶   ВКЛЮЧИТЬ ЗАЩИТУ",
-            18f,
-            Color.WHITE,
-            true
-        ).apply {
+        connect = label("▶   ВКЛЮЧИТЬ ЗАЩИТУ", 17f, Color.WHITE, true).apply {
             gravity = Gravity.CENTER
-            background = gradient(
-                intArrayOf(
-                    Color.rgb(112, 20, 255),
-                    Color.rgb(231, 20, 205)
-                ),
-                dp(45).toFloat()
-            )
-            elevation = dp(12).toFloat()
-            setShadowLayer(dp(12).toFloat(), 0f, 0f, purple)
-            setPadding(dp(12), dp(17), dp(12), dp(17))
+            setPadding(dp(12), dp(16), dp(12), dp(16))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(Color.rgb(112, 20, 255), Color.rgb(231, 20, 205))
+            ).apply { cornerRadius = dp(40).toFloat() }
+            elevation = dp(10).toFloat()
             setOnClickListener {
-                connected = false
-                statusText.text = "НЕ ПОДКЛЮЧЕНО"
-                statusDescription.text =
-                    "VPN-сервер ещё не настроен"
-                connectButton.text = "▶   ВКЛЮЧИТЬ ЗАЩИТУ"
-                Toast.makeText(
-                    this@MainActivity,
+                status.text = "НЕ ПОДКЛЮЧЕНО"
+                Toast.makeText(this@MainActivity,
                     "VPN-сервер ещё не настроен. Подключение не выполнялось.",
-                    Toast.LENGTH_LONG
-                ).show()
+                    Toast.LENGTH_LONG).show()
             }
         }
+        page.addView(connect, LinearLayout.LayoutParams(-1, dp(58)))
+        space(page, 22)
 
-        content.addView(
-            connectButton,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(58)
-            )
-        )
-        addSpace(content, 24)
-    }
-
-    private fun buildServerCard() {
-        val box = card()
-
-        val top = LinearLayout(this).apply {
+        val serverCard = panel()
+        val serverHeader = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-
-        top.addView(
-            text("ВЫБРАННЫЙ СЕРВЕР", 15f, white, true),
-            LinearLayout.LayoutParams(0, dp(34), 1f)
-        )
-
-        top.addView(
-            text("СМЕНИТЬ  →", 15f, lavender, true).apply {
-                setOnClickListener { showServers() }
-            }
-        )
-
-        box.addView(top)
-
-        val server = LinearLayout(this).apply {
+        serverHeader.addView(label("ВЫБРАННЫЙ СЕРВЕР", 14f, white, true),
+            LinearLayout.LayoutParams(0, dp(32), 1f))
+        serverHeader.addView(label("СМЕНИТЬ  →", 13f, lavender, true).apply {
+            setOnClickListener { showServers() }
+        })
+        serverCard.addView(serverHeader)
+        val serverRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(12), 0, 0)
         }
+        serverRow.addView(label(flag(selectedServer), 39f), LinearLayout.LayoutParams(dp(58), dp(58)))
+        val serverNames = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        serverNames.addView(label(selectedServer, 18f, white, true))
+        serverNames.addView(label(selectedCity, 14f, lavender))
+        serverRow.addView(serverNames, LinearLayout.LayoutParams(0, dp(58), 1f))
+        serverRow.addView(label("▂ ▅ ▇", 20f, purple, true))
+        serverCard.addView(serverRow)
+        page.addView(serverCard)
+        space(page, 18)
 
-        server.addView(
-            text(
-                flagFor(selectedServer),
-                42f
-            ),
-            LinearLayout.LayoutParams(dp(65), dp(60))
-        )
-
-        val names = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-        }
-        names.addView(text(selectedServer, 19f, white, true))
-        names.addView(text(selectedCity, 16f, lavender))
-
-        server.addView(
-            names,
-            LinearLayout.LayoutParams(0, dp(60), 1f)
-        )
-
-        server.addView(
-            text("▂ ▅ ▇", 21f, purple, true).apply {
-                setShadowLayer(dp(10).toFloat(), 0f, 0f, purple)
-            }
-        )
-
-        box.addView(server)
-        content.addView(box)
-        addSpace(content, 18)
-    }
-
-    private fun flagFor(country: String): String {
-        return when (country) {
-            "США" -> "🇺🇸"
-            "Англия" -> "🇬🇧"
-            "Нидерланды" -> "🇳🇱"
-            "Германия" -> "🇩🇪"
-            "Франция" -> "🇫🇷"
-            else -> "🌐"
-        }
-    }
-
-    private fun buildMap() {
-        val map = WorldMapView()
-        val frame = FrameLayout(this).apply {
+        val mapFrame = FrameLayout(this).apply {
             background = GradientDrawable().apply {
-                cornerRadius = dp(24).toFloat()
                 setColor(Color.rgb(8, 4, 22))
-                setStroke(dp(1), purple)
+                cornerRadius = dp(23).toFloat()
+                setStroke(dp(1), Color.rgb(112, 25, 190))
             }
             clipToOutline = true
-            addView(
-                map,
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    dp(155)
-                )
-            )
+            addView(WorldMapView(), FrameLayout.LayoutParams(-1, dp(155)))
         }
+        page.addView(mapFrame, LinearLayout.LayoutParams(-1, dp(155)))
+        space(page, 18)
 
-        content.addView(
-            frame,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(155)
-            )
-        )
-        addSpace(content, 18)
-    }
-
-    private fun buildProtectionCard() {
-        val box = card()
-        box.addView(
-            text("ТВОЯ ЗАЩИТА", 16f, white, true)
-        )
-        addSpace(box, 12)
-
-        val row = LinearLayout(this).apply {
+        val protection = panel()
+        protection.addView(label("ТВОЯ ЗАЩИТА", 15f, white, true))
+        space(protection, 12)
+        val stats = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-
-        val items = listOf(
-            Triple("♢", "Анонимность", "—"),
-            Triple("ϟ", "Скорость", "—"),
-            Triple("▢", "Безопасность", "—")
-        )
-
-        items.forEachIndexed { index, item ->
-            val column = LinearLayout(this).apply {
+        listOf(Triple("♢", "Анонимность", "—"), Triple("ϟ", "Скорость", "—"),
+            Triple("▢", "Безопасность", "—")).forEach { item ->
+            val col = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
             }
-
-            column.addView(
-                text(item.first, 38f, lavender, true).apply {
-                    gravity = Gravity.CENTER
-                    setShadowLayer(dp(10).toFloat(), 0f, 0f, purple)
-                }
-            )
-            column.addView(
-                text(item.second, 12f, lavender).apply {
-                    gravity = Gravity.CENTER
-                }
-            )
-            column.addView(
-                text(item.third, 15f, white, true).apply {
-                    gravity = Gravity.CENTER
-                }
-            )
-
-            row.addView(
-                column,
-                LinearLayout.LayoutParams(0, dp(92), 1f)
-            )
-
-            if (index < 2) {
-                val line = View(this).apply {
-                    setBackgroundColor(Color.rgb(64, 31, 99))
-                }
-                row.addView(
-                    line,
-                    LinearLayout.LayoutParams(dp(1), dp(70))
-                )
-            }
+            col.addView(label(item.first, 32f, lavender, true).apply { gravity = Gravity.CENTER })
+            col.addView(label(item.second, 11f, lavender).apply { gravity = Gravity.CENTER })
+            col.addView(label(item.third, 14f, white, true).apply { gravity = Gravity.CENTER })
+            stats.addView(col, LinearLayout.LayoutParams(0, dp(82), 1f))
         }
+        protection.addView(stats)
+        page.addView(protection)
 
-        box.addView(row)
-        content.addView(box)
+        root.addView(navigation())
+        setContentView(root)
     }
 
-    private fun buildNavigation(): LinearLayout {
+    private fun flag(country: String) = when (country) {
+        "США" -> "🇺🇸"
+        "Англия" -> "🇬🇧"
+        "Нидерланды" -> "🇳🇱"
+        "Германия" -> "🇩🇪"
+        "Франция" -> "🇫🇷"
+        else -> "🌐"
+    }
+
+    private fun navigation(): LinearLayout {
         val nav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(dp(5), dp(10), dp(5), dp(8))
+            setPadding(dp(4), dp(8), dp(4), dp(8))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(
-                    Color.rgb(14, 6, 30),
-                    Color.rgb(7, 3, 18)
-                )
+                intArrayOf(Color.rgb(17, 7, 34), Color.rgb(7, 3, 18))
             ).apply {
-                cornerRadii = floatArrayOf(
-                    dp(25).toFloat(), dp(25).toFloat(),
-                    dp(25).toFloat(), dp(25).toFloat(),
-                    0f, 0f, 0f, 0f
-                )
+                cornerRadii = floatArrayOf(dp(22).toFloat(), dp(22).toFloat(),
+                    dp(22).toFloat(), dp(22).toFloat(), 0f, 0f, 0f, 0f)
                 setStroke(dp(1), Color.rgb(83, 20, 142))
             }
         }
-
-        val tabs = listOf(
-            Pair("⌂", "Главная"),
-            Pair("◎", "Серверы"),
-            Pair("▥", "Статистика"),
-            Pair("♙", "Профиль"),
-            Pair("⚙", "Настройки")
-        )
-
+        val tabs = listOf("⌂" to "Главная", "◎" to "Серверы",
+            "▥" to "Статистика", "♙" to "Профиль", "⚙" to "Настройки")
         tabs.forEachIndexed { index, tab ->
-            val active = index == 0
-            val item = LinearLayout(this).apply {
+            val col = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(0, dp(4), 0, dp(2))
                 setOnClickListener {
                     when (index) {
                         0 -> showHome()
                         1 -> showServers()
-                        2 -> showSimplePage("СТАТИСТИКА")
-                        3 -> showSimplePage("ПРОФИЛЬ")
-                        4 -> showSimplePage("НАСТРОЙКИ")
+                        2 -> showInfo("СТАТИСТИКА")
+                        3 -> showInfo("ПРОФИЛЬ")
+                        else -> showInfo("НАСТРОЙКИ")
                     }
                 }
             }
-
-            item.addView(
-                text(
-                    tab.first,
-                    29f,
-                    if (active) pink else lavender,
-                    true
-                ).apply {
-                    gravity = Gravity.CENTER
-                    if (active) {
-                        setShadowLayer(dp(12).toFloat(), 0f, 0f, pink)
-                    }
-                }
-            )
-
-            item.addView(
-                text(
-                    tab.second,
-                    11f,
-                    if (active) pink else lavender,
-                    active
-                ).apply {
-                    gravity = Gravity.CENTER
-                }
-            )
-
-            if (active) {
-                item.addView(
-                    View(this).apply {
-                        background = gradient(
-                            intArrayOf(pink, purple),
-                            dp(10).toFloat()
-                        )
-                    },
-                    LinearLayout.LayoutParams(dp(48), dp(3)).apply {
-                        topMargin = dp(6)
-                    }
-                )
-            } else {
-                item.addView(View(this), LinearLayout.LayoutParams(1, dp(9)))
-            }
-
-            nav.addView(
-                item,
-                LinearLayout.LayoutParams(0, dp(78), 1f)
-            )
+            col.addView(label(tab.first, 26f, if (index == 0) pink else lavender, true).apply {
+                gravity = Gravity.CENTER
+            })
+            col.addView(label(tab.second, 10f, if (index == 0) pink else lavender).apply {
+                gravity = Gravity.CENTER
+            })
+            nav.addView(col, LinearLayout.LayoutParams(0, dp(60), 1f))
         }
-
         return nav
     }
 
@@ -518,161 +247,154 @@ class MainActivity : Activity() {
             setPadding(dp(20), dp(24), dp(20), dp(20))
             setBackgroundColor(bg)
         }
-
-        root.addView(text("NIVORANT", 28f, white, true))
-        root.addView(text("ВЫБЕРИ СЕРВЕР", 18f, lavender, true))
-        addSpace(root, 20)
-
-        val servers = listOf(
-            Triple("🇺🇸", "США", "New York"),
-            Triple("🇬🇧", "Англия", "London"),
-            Triple("🇳🇱", "Нидерланды", "Amsterdam"),
-            Triple("🇩🇪", "Германия", "Frankfurt"),
-            Triple("🇫🇷", "Франция", "Paris")
-        )
-
-        servers.forEach { server ->
-            val item = card()
+        root.addView(label("NIVORANT", 28f, white, true))
+        root.addView(label("ВЫБЕРИ СЕРВЕР", 17f, lavender, true))
+        space(root, 20)
+        val servers = listOf(Triple("🇺🇸", "США", "New York"),
+            Triple("🇬🇧", "Англия", "London"), Triple("🇳🇱", "Нидерланды", "Amsterdam"),
+            Triple("🇩🇪", "Германия", "Frankfurt"), Triple("🇫🇷", "Франция", "Paris"))
+        servers.forEach { item ->
+            val box = panel()
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
             }
-            row.addView(text(server.first, 35f))
+            row.addView(label(item.first, 34f))
             val names = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(15), 0, 0, 0)
+                setPadding(dp(14), 0, 0, 0)
             }
-            names.addView(text(server.second, 18f, white, true))
-            names.addView(text(server.third, 14f, lavender))
-            row.addView(names, LinearLayout.LayoutParams(0, dp(55), 1f))
-            row.addView(text("›", 30f, purple, true))
-            item.addView(row)
-
-            item.setOnClickListener {
-                selectedServer = server.second
-                selectedCity = server.third
-                Toast.makeText(
-                    this,
-                    "Выбран сервер: ${server.second}",
-                    Toast.LENGTH_SHORT
-                ).show()
+            names.addView(label(item.second, 17f, white, true))
+            names.addView(label(item.third, 13f, lavender))
+            row.addView(names, LinearLayout.LayoutParams(0, dp(54), 1f))
+            row.addView(label("›", 28f, purple, true))
+            box.addView(row)
+            box.setOnClickListener {
+                selectedServer = item.second
+                selectedCity = item.third
                 showHome()
+                Toast.makeText(this, "Выбран сервер: ${item.second}", Toast.LENGTH_SHORT).show()
             }
-
-            root.addView(
-                item,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(85)
-                ).apply { bottomMargin = dp(12) }
-            )
+            root.addView(box, LinearLayout.LayoutParams(-1, dp(82)).apply {
+                bottomMargin = dp(12)
+            })
         }
-
-        root.addView(
-            text("←  НА ГЛАВНУЮ", 16f, lavender, true).apply {
-                setPadding(0, dp(15), 0, dp(15))
-                setOnClickListener { showHome() }
-            }
-        )
-
+        root.addView(label("←  НА ГЛАВНУЮ", 15f, pink, true).apply {
+            setPadding(0, dp(18), 0, dp(18))
+            setOnClickListener { showHome() }
+        })
         setContentView(root)
     }
 
-    private fun showSimplePage(title: String) {
+    private fun showInfo(title: String) {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(dp(24), dp(24), dp(24), dp(24))
             setBackgroundColor(bg)
         }
-
-        root.addView(text("NIVORANT", 30f, white, true).apply {
-            gravity = Gravity.CENTER
-        })
-
-        root.addView(text(title, 22f, lavender, true).apply {
+        root.addView(label("NIVORANT", 29f, white, true).apply { gravity = Gravity.CENTER })
+        root.addView(label(title, 21f, lavender, true).apply {
             gravity = Gravity.CENTER
             setPadding(0, dp(20), 0, dp(20))
         })
-
-        root.addView(text(
-            "Функция будет доступна после настройки VPN-сервиса.",
-            15f,
-            lavender
-        ).apply {
+        root.addView(label("Этот раздел будет доступен после настройки VPN-сервиса.",
+            14f, lavender).apply { gravity = Gravity.CENTER })
+        root.addView(label("←  НА ГЛАВНУЮ", 15f, pink, true).apply {
             gravity = Gravity.CENTER
+            setPadding(0, dp(32), 0, dp(20))
+            setOnClickListener { showHome() }
         })
-
-        root.addView(
-            text("←  НА ГЛАВНУЮ", 16f, pink, true).apply {
-                gravity = Gravity.CENTER
-                setPadding(0, dp(35), 0, dp(20))
-                setOnClickListener { showHome() }
-            }
-        )
-
         setContentView(root)
     }
 
     inner class NeonOrbView : View(this) {
-        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        private val p = Paint(Paint.ANTI_ALIAS_FLAG)
         private var angle = 0f
         private val animator = ValueAnimator.ofFloat(0f, 360f).apply {
-            duration = 9000
+            duration = 9000L
             repeatCount = ValueAnimator.INFINITE
             interpolator = LinearInterpolator()
-            addUpdateListener {
-                angle = it.animatedValue as Float
-                invalidate()
-            }
+            addUpdateListener { angle = it.animatedValue as Float; invalidate() }
         }
-
-        init {
-            animator.start()
-        }
-
+        init { setLayerType(View.LAYER_TYPE_SOFTWARE, null); animator.start() }
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
-
             val cx = width / 2f
             val cy = height / 2f
-            val radius = min(width, height) * 0.39f
+            val r = min(width, height) * 0.29f
+            p.style = Paint.Style.STROKE
+            p.strokeWidth = dp(2).toFloat()
+            p.color = Color.argb(45, 170, 60, 255)
+            canvas.drawCircle(cx, cy, r * 1.55f, p)
+            p.color = purple
+            p.strokeWidth = dp(3).toFloat()
+            p.setShadowLayer(dp(14).toFloat(), 0f, 0f, purple)
+            canvas.drawArc(cx-r*1.5f, cy-r*1.5f, cx+r*1.5f, cy+r*1.5f,
+                angle, 85f, false, p)
+            p.color = pink
+            canvas.drawArc(cx-r*1.36f, cy-r*1.36f, cx+r*1.36f, cy+r*1.36f,
+                -angle*0.7f, 48f, false, p)
+            p.style = Paint.Style.FILL
+            p.color = Color.rgb(25, 8, 48)
+            p.setShadowLayer(dp(25).toFloat(), 0f, 0f, purple)
+            canvas.drawCircle(cx, cy, r, p)
+            p.clearShadowLayer()
+            p.style = Paint.Style.STROKE
+            p.strokeWidth = dp(3).toFloat()
+            p.color = pink
+            p.setShadowLayer(dp(12).toFloat(), 0f, 0f, pink)
+            canvas.drawCircle(cx, cy, r*0.82f, p)
+            p.clearShadowLayer()
+            p.style = Paint.Style.STROKE
+            p.strokeWidth = dp(7).toFloat()
+            p.strokeCap = Paint.Cap.ROUND
+            p.color = white
+            canvas.drawArc(cx-r*0.34f, cy-r*0.34f, cx+r*0.34f, cy+r*0.34f,
+                135f, 270f, false, p)
+        }
+        override fun onDetachedFromWindow() {
+            animator.cancel()
+            super.onDetachedFromWindow()
+        }
+    }
 
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = 2f
-            paint.color = Color.argb(35, 165, 45, 255)
-            canvas.drawCircle(cx, cy, radius * 1.48f, paint)
-
-            paint.strokeWidth = 2.5f
-            paint.color = purple
-            paint.setShadowLayer(18f, 0f, 0f, purple)
-            canvas.drawArc(
-                cx - radius * 1.5f,
-                cy - radius * 1.5f,
-                cx + radius * 1.5f,
-                cy + radius * 1.5f,
-                angle,
-                75f,
-                false,
-                paint
-            )
-
-            paint.color = pink
-            canvas.drawArc(
-                cx - radius * 1.35f,
-                cy - radius * 1.35f,
-                cx + radius * 1.35f,
-                cy + radius * 1.35f,
-                -angle * 0.7f,
-                42f,
-                false,
-                paint
-            )
-
-            paint.strokeWidth = 15f
-            paint.color = purple
-            paint.setShadowLayer(28f, 0f, 0f, purple)
-            canvas.drawCircle(cx, cy, radius, paint)
-
-            paint.strokeWidth = 3f
-  
+    inner class WorldMapView : View(this) {
+        private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val w = width.toFloat()
+            val h = height.toFloat()
+            p.style = Paint.Style.STROKE
+            p.strokeWidth = dp(1).toFloat()
+            p.color = Color.argb(35, 175, 100, 255)
+            for (i in 1..5) canvas.drawLine(w*i/6f, 0f, w*i/6f, h, p)
+            for (i in 1..3) canvas.drawLine(0f, h*i/4f, w, h*i/4f, p)
+            p.style = Paint.Style.FILL
+            p.color = Color.rgb(30, 18, 57)
+            val land = Path().apply {
+                moveTo(w*.08f,h*.32f); lineTo(w*.18f,h*.18f); lineTo(w*.31f,h*.23f)
+                lineTo(w*.36f,h*.42f); lineTo(w*.29f,h*.62f); lineTo(w*.19f,h*.7f)
+                lineTo(w*.11f,h*.55f); close()
+                moveTo(w*.43f,h*.25f); lineTo(w*.58f,h*.18f); lineTo(w*.69f,h*.29f)
+                lineTo(w*.66f,h*.48f); lineTo(w*.55f,h*.55f); lineTo(w*.46f,h*.43f); close()
+                moveTo(w*.7f,h*.58f); lineTo(w*.83f,h*.5f); lineTo(w*.92f,h*.65f)
+                lineTo(w*.86f,h*.82f); lineTo(w*.74f,h*.78f); close()
+            }
+            canvas.drawPath(land, p)
+            val nodes = listOf(.22f to .38f, .52f to .36f, .78f to .62f, .63f to .3f, .37f to .55f)
+            nodes.forEachIndexed { i, pt ->
+                p.color = if (i == 0) pink else purple
+                p.setShadowLayer(dp(8).toFloat(), 0f, 0f, p.color)
+                canvas.drawCircle(w*pt.first, h*pt.second, dp(4).toFloat(), p)
+                p.clearShadowLayer()
+            }
+            p.style = Paint.Style.STROKE
+            p.strokeWidth = dp(2).toFloat()
+            p.color = Color.argb(150, 190, 90, 255)
+            canvas.drawLine(w*.22f,h*.38f,w*.52f,h*.36f,p)
+            canvas.drawLine(w*.52f,h*.36f,w*.78f,h*.62f,p)
+            canvas.drawLine(w*.52f,h*.36f,w*.63f,h*.3f,p)
+        }
+    }
+}
