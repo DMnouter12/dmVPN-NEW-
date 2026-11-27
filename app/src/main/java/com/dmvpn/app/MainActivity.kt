@@ -650,3 +650,17 @@ class MainActivity : Activity() {
                     dp(4).toFloat(),
                     p
                 )
+
+                p.clearShadowLayer()
+            }
+
+            p.style = Paint.Style.STROKE
+            p.strokeWidth = dp(2).toFloat()
+            p.color = Color.argb(150, 190, 90, 255)
+
+            canvas.drawLine(w * .22f, h * .38f, w * .52f, h * .36f, p)
+            canvas.drawLine(w * .52f, h * .36f, w * .78f, h * .62f, p)
+            canvas.drawLine(w * .52f, h * .36f, w * .63f, h * .3f, p)
+        }
+    }
+}
