@@ -633,4 +633,49 @@ class MainActivity : Activity() {
                 moveTo(w * .43f, h * .25f)
                 lineTo(w * .58f, h * .18f)
                 lineTo(w * .69f, h * .29f)
-                lineTo(w * .66f, h
+                
+                lineTo(w * .66f, h * .48f)
+                lineTo(w * .55f, h * .55f)
+                lineTo(w * .46f, h * .43f)
+                close()
+
+                moveTo(w * .7f, h * .58f)
+                lineTo(w * .83f, h * .5f)
+                lineTo(w * .92f, h * .65f)
+                lineTo(w * .86f, h * .82f)
+                lineTo(w * .74f, h * .78f)
+                close()
+            }
+
+            canvas.drawPath(land, p)
+
+            val nodes = listOf(
+                .22f to .38f,
+                .52f to .36f,
+                .78f to .62f,
+                .63f to .3f,
+                .37f to .55f
+            )
+
+            nodes.forEachIndexed { i, pt ->
+                p.color = if (i == 0) pink else purple
+                p.setShadowLayer(dp(8).toFloat(), 0f, 0f, p.color)
+                canvas.drawCircle(
+                    w * pt.first,
+                    h * pt.second,
+                    dp(4).toFloat(),
+                    p
+                )
+                p.clearShadowLayer()
+            }
+
+            p.style = Paint.Style.STROKE
+            p.strokeWidth = dp(2).toFloat()
+            p.color = Color.argb(150, 190, 90, 255)
+
+            canvas.drawLine(w * .22f, h * .38f, w * .52f, h * .36f, p)
+            canvas.drawLine(w * .52f, h * .36f, w * .78f, h * .62f, p)
+            canvas.drawLine(w * .52f, h * .36f, w * .63f, h * .3f, p)
+        }
+    }
+}
