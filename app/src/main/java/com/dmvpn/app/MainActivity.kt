@@ -30,8 +30,6 @@ class MainActivity : Activity() {
     private var selectedServer = "США"
     private var selectedCity = "New York"
     private var currentTab = 0
-
-    // Текущий экран нужен для плавной смены страниц
     private var activeScreen: View? = null
 
     private lateinit var page: LinearLayout
@@ -48,7 +46,7 @@ class MainActivity : Activity() {
     private fun dp(v: Int) =
         (v * resources.displayMetrics.density).toInt()
 
-    // Плавный переход между экранами без мигания
+    // Плавное наложение нового экрана на предыдущий
     private fun showAnimated(root: View) {
         val container = findViewById<FrameLayout>(android.R.id.content)
         val oldScreen = activeScreen
@@ -60,7 +58,6 @@ class MainActivity : Activity() {
             return
         }
 
-        // Убираем оставшиеся старые экраны после предыдущих переходов
         for (i in container.childCount - 1 downTo 0) {
             val child = container.getChildAt(i)
             if (child !== oldScreen) {
@@ -71,7 +68,6 @@ class MainActivity : Activity() {
 
         oldScreen.animate().cancel()
         oldScreen.alpha = 1f
-
         root.alpha = 0f
 
         container.addView(
@@ -100,7 +96,6 @@ class MainActivity : Activity() {
             .start()
     }
 
-    // Анимация нажатия без изменения дизайна
     private fun animateTap(view: View, action: () -> Unit) {
         view.animate().cancel()
         view.animate()
@@ -112,9 +107,7 @@ class MainActivity : Activity() {
                     .scaleX(1f)
                     .scaleY(1f)
                     .setDuration(100L)
-                    .withEndAction {
-                        action()
-                    }
+                    .withEndAction { action() }
                     .start()
             }
             .start()
@@ -189,15 +182,12 @@ class MainActivity : Activity() {
         })
 
         brand.addView(label("Y O U R   P R I V A T E   N E T W O R K", 9f, lavender))
-
         header.addView(brand, LinearLayout.LayoutParams(0, dp(62), 1f))
 
         header.addView(label("⚙", 29f, white, true).apply {
             gravity = Gravity.CENTER
             setOnClickListener {
-                animateTap(it) {
-                    showInfo("НАСТРОЙКИ")
-                }
+                animateTap(it) { showInfo("НАСТРОЙКИ") }
             }
         }, LinearLayout.LayoutParams(dp(48), dp(55)))
 
@@ -214,7 +204,6 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             setShadowLayer(dp(10).toFloat(), 0f, 0f, pink)
         }
-
         page.addView(status)
 
         page.addView(label("Твоё соединение пока не защищено", 14f, lavender).apply {
@@ -263,9 +252,7 @@ class MainActivity : Activity() {
 
         serverHeader.addView(label("СМЕНИТЬ  →", 13f, lavender, true).apply {
             setOnClickListener {
-                animateTap(it) {
-                    showServers()
-                }
+                animateTap(it) { showServers() }
             }
         })
 
@@ -287,7 +274,6 @@ class MainActivity : Activity() {
 
         serverNames.addView(label(selectedServer, 18f, white, true))
         serverNames.addView(label(selectedCity, 14f, lavender))
-
         serverRow.addView(serverNames, LinearLayout.LayoutParams(0, dp(58), 1f))
         serverRow.addView(label("▂ ▅ ▇", 20f, purple, true))
 
@@ -331,11 +317,9 @@ class MainActivity : Activity() {
             col.addView(label(item.first, 32f, lavender, true).apply {
                 gravity = Gravity.CENTER
             })
-
             col.addView(label(item.second, 11f, lavender).apply {
                 gravity = Gravity.CENTER
             })
-
             col.addView(label(item.third, 14f, white, true).apply {
                 gravity = Gravity.CENTER
             })
@@ -345,7 +329,6 @@ class MainActivity : Activity() {
 
         protection.addView(stats)
         page.addView(protection)
-
         root.addView(navigation(), LinearLayout.LayoutParams(-1, dp(76)))
 
         showAnimated(root)
@@ -365,7 +348,6 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             setPadding(dp(4), dp(8), dp(4), dp(8))
-
             background = GradientDrawable(
                 GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(Color.rgb(17, 7, 34), Color.rgb(7, 3, 18))
@@ -394,7 +376,6 @@ class MainActivity : Activity() {
             val col = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-
                 setOnClickListener {
                     animateTap(it) {
                         when (index) {
@@ -410,9 +391,7 @@ class MainActivity : Activity() {
 
             col.addView(label(tab.first, 26f, tabColor, true).apply {
                 gravity = Gravity.CENTER
-                if (active) {
-                    setShadowLayer(dp(9).toFloat(), 0f, 0f, pink)
-                }
+                if (active) setShadowLayer(dp(9).toFloat(), 0f, 0f, pink)
             })
 
             col.addView(label(tab.second, 10f, tabColor).apply {
@@ -434,7 +413,6 @@ class MainActivity : Activity() {
         }
 
         val scroll = ScrollView(this)
-
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(24), dp(20), dp(20))
@@ -455,7 +433,6 @@ class MainActivity : Activity() {
 
         servers.forEach { item ->
             val box = panel()
-
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -470,10 +447,8 @@ class MainActivity : Activity() {
 
             names.addView(label(item.second, 17f, white, true))
             names.addView(label(item.third, 13f, lavender))
-
             row.addView(names, LinearLayout.LayoutParams(0, dp(54), 1f))
             row.addView(label("›", 28f, purple, true))
-
             box.addView(row)
 
             box.setOnClickListener {
@@ -481,7 +456,6 @@ class MainActivity : Activity() {
                     selectedServer = item.second
                     selectedCity = item.third
                     showHome()
-
                     Toast.makeText(
                         this@MainActivity,
                         "Выбран сервер: ${item.second}",
@@ -498,7 +472,6 @@ class MainActivity : Activity() {
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(navigation(), LinearLayout.LayoutParams(-1, dp(76)))
-
         showAnimated(root)
     }
 
@@ -541,7 +514,6 @@ class MainActivity : Activity() {
 
         root.addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(navigation(), LinearLayout.LayoutParams(-1, dp(76)))
-
         showAnimated(root)
     }
 
@@ -587,7 +559,6 @@ class MainActivity : Activity() {
             )
 
             p.color = pink
-
             canvas.drawArc(
                 cx - r * 1.36f, cy - r * 1.36f,
                 cx + r * 1.36f, cy + r * 1.36f,
@@ -653,4 +624,13 @@ class MainActivity : Activity() {
                 moveTo(w * .08f, h * .32f)
                 lineTo(w * .18f, h * .18f)
                 lineTo(w * .31f, h * .23f)
-                li
+                lineTo(w * .36f, h * .42f)
+                lineTo(w * .29f, h * .62f)
+                lineTo(w * .19f, h * .7f)
+                lineTo(w * .11f, h * .55f)
+                close()
+
+                moveTo(w * .43f, h * .25f)
+                lineTo(w * .58f, h * .18f)
+                lineTo(w * .69f, h * .29f)
+                lineTo(w * .66f, h
